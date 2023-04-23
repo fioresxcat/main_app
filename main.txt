@@ -1,0 +1,86 @@
+vid_path = ''
+cap = cv2.VideoCapture(vid_path)
+model = YOLO('yolov8s-segment.pt')
+while self.cap.isOpened():
+    ret, frame = cap.read()
+    orig_frame = frame.copy()
+
+    if not ret:
+        break
+    
+    # ---------- infer --------------
+    res = model(frame)
+    table_coord, ball_bb, person_bbs = process_res(res)
+
+    # ----------- draw res on frame --------------
+    frame = draw_res_on_frame(table_coord, ball_bb, person_bbs, frame)
+
+    # ------------- create a minimap with table coord -------------
+    table_img = cve.perspectiveTransform(...)
+    table_img = cv2.resize(table_img, (300, 150))
+
+    # ------------ get ball coord  --------------
+    ball_tracker.update(ball_bb)   # append to a deque
+
+    # draw trajectory onto frame if len(history) == 30
+    frame = ball_tracker.draw_trajectory(frame)
+
+    # check ball state (will be slow for about 5-10 frames)
+    state = ball_tracker.check_ball_state()
+    if state['is_bounce']:      # legit ball bounce from this side to other side
+        # draw a circle around bounce_coord
+        pass
+
+        # draw a circle on the mimimap at the top left of frame
+        transformed_ball_coord = cv2.perspectiveTransform(...)
+        table_img = cv2.circle(...)
+
+    elif state['is_end']:       # ball disappear for a number of frame
+        pass
+    
+    elif state['is_under_net']:   # bong ko qua luoi
+        pass
+    
+    elif state['is_hit']:      # vot cham bong
+        pass
+
+    
+
+class BallTracker(object):
+    def __init__(self, max_len):
+        self.history = deque(maxlen=max_len)
+        self.last_ball_bounce_coord = None
+        self.max_assert_ball_bounce = 5
+        self.assert_ball_bounce_cnt = 0
+        pass
+    
+    def update(self, bb):
+        self.history.append(bb)
+
+        # check if the new bb has higher center than previous bb => ball_bounce
+        self.check_ball_bounce()
+    
+
+    def check_ball_state(self):
+        
+
+
+
+
+    def check_ball_bounce(self):
+        latest_bb = self.history[-1]
+        xmin, ymin, xmax, ymax = latest_bb
+        y_center =  (ymin + ymax)/2
+        if y_center > self.min_y_center:
+            if self.assert_ball_bounce_cnt == 0:
+                self.last_ball_bounce_coord = latest_bb
+            else:
+                self.assert_ball_bounce_cnt += 1
+        else:
+            self.last_ball_bounce_coord = None
+            self.assert_ball_bounce_cnt = 0
+
+        if self.assert_ball_bounce_cnt == self.max_assert_ball_bounce:
+            return True
+        else:
+            return False
