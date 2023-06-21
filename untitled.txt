@@ -1,0 +1,21 @@
+1. debug code spot event
+- description:
+  + range: 3489 - 3909
+
+2. problems
+- 8829-9201, 9658-9989 đang bị loại khỏi final
+  + đã fix
+- thi thoảng các rally vẫn bị reject do pha bóng diễn ra quá nhanh (ngắn hơn 2s)
+  + đã fix min duration xuống còn 1.5s
+- phần phát hiện end_reason vẫn chưa phân biệt được là do ăn điểm winner hay là do đánh ra ngoài
+  + đã thêm code phân biệt
+- thỉnh thoảng bị 1 false positive ở vị trí xa lắc xa lơ làm cho quỹ đạo bóng thay đổi bất chợt => làm sai việc detect cực trị
+
+- [10503, 11085] test 4 bị nhầm ball_out thành good_ball vì bóng dù ra ngoài nhưng vẫn đập đất nảy lên => bị nhầm thành ball_bounce
+  + fix bằng cách check ball_bounce phải ở trong bàn.
+- [12196, 12528] cũng bị tương tự như trên
+- [13968, 14235] chưa được loại dù là invalid rally
+- [14743, 15304] là trả bóng qua lại nhưng vẫn bị tính là rally
+- [16449, 16851] nhận đúng net_hit nhưng lại nhầm người thắng
+- [30059, 31403] bị tương tự
+- 

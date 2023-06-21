@@ -1,0 +1,20 @@
+1. Cách check ball start: bao gồm các điều kiện sau
+- Check min_fr_with_ball: trong 120 frame tiếp theo, ít nhất 60% trong số đó là có bóng
+- Check ball trajectory
+  Ball trajectory được lấy từ fr_idx -> fr_idx + 120 (120 là fr_check_interval)
+  + check velocity: có ít nhất 70% vận tốc tức thời (pixel/frame) nằm trong ngưỡng cho phép (min_v < v < max_v)
+  + check min travel distance: max_cx và min_cx của quả bóng phải lệch nhau ít nhất 1 ngưỡng (đang để là 200 với ảnh đầu vào 1920x1080)
+
+2. Cách check ball end:
+- Trong 120 frame tiếp theo có ko quá 10% là có bóng (ít nhât 90% ko có bóng)
+
+3. Cách check lại các rally
+- check duration < 2s => invalid
+- check if have no extrema => invalid
+=> đây nên là cách check ra các rally tốt thì hơn, nó sẽ loại hết đi những rally hỏng
+
+3. Sửa rule để bắt được những trường hợp bóng giao hỏng ra ngoài, bóng giao ko qua lưới
+- giảm min_fr_with_ball_percent xuống còn 30%
+- check velocity chỉ check 50% frame đầu tiên có bóng
+- bỏ check min travel distance
+=> đã bắt được những pha giao bóng lỗi , nhưng vẫn chưa phân biệt được giao bóng lỗi vs trả bóng
