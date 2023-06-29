@@ -1,0 +1,319 @@
+các lỗi đang sai
+
+1. gán n_turns = num_bounces là sai vì nhiều TH bóng nảy linh tinh => ko phải 2 ngườid đánh qua lại
+- thử gán n_turns = num_over_net: số lần qua lại = số lần bóng qua lưới
+
+2. xác định người thắng bằng bounce_side đang bị sai, trong trường hợp bóng nảy gần lứoi (7020-8357)
+- do xác định vị trí lưới sai => xác định bounce_side sai
+
+3. sự kiện net đang bị trường hợp: bóng cao hơn lưới nhiều thì sẽ ko detect được
+- 2 cách giải quyết
+ + train lại centernet_event
+ + ko dùng sự kiện net nữa
+
+4. detect nhầm bounce: 12304, 15674, 
+- các trường hợp bóng dump xuống bàn nhưng vẫn bị tính là bounce (dù đã loại đưuọc bằng cách set probs threshold): 18947, 18984, 
+- TH người chơi chạm vợt trả bóng nhưng vẫn bị tính là bounce: 22244, 30689, 31691
+-  nghi vấn ko đủ số frame bóng xuất hiện nhưng vẫn infer ?: 28708, 4012
+
+5. detect thừa bounce ở dưới bàn làm sai kết quả infer winner and end_reason: [12135, 12586], [18180, 18669]
+
+
+6. kết quả debug bounce probs:
+- 4012: frame 4005 - 4013: 
+  + ko có đủ nhiều frame detect được bóng
+  + detect nhầm bóng vào mũi giày, làm phần crop bị sai
+
+- 18947:
+  + detect nhầm bóng vào mũi giày, làm phần crop bị sai
+
+- 18984: bóng ở dưới bàn trong 5 frame đầu, trồi lên mặt bàn trong 4 frames cuối
+ + detect bóng đúng
+ + tuy nhiên vẫn nhầm
+
+ => model bị overfit rằng chỉ cần 1 nửa chạm gần bàn là đủ
+ => augment mask 1 nửa và chuyển nhãn thành empty_event
+
+- 15674: bóng rơi vào cạnh bành rồi dump xuống
+ + detect bóng vẫn đúng, nhưng ko hiểu sao classify vẫn sai, tuy nhiên probs thấp
+=> trường hợp này cũng như trường hợp trên
+
+- 12304: chạm vợt trả bóng
+ + detect bóng đúng
+ + probs cũng khá cao, may mà có 1 cái tự nhiên thấp xuống nên loại được
+
+- 22244: chạm vợt trả bóng
+ + detect bóng vẫn đúng
+
+- 30689: chạm vợt trả bóng
+ + detect bóng đúng
+ + có nhiều frame ko có bóng (trong chuỗi 9 frames chỉ có 4 frame có)
+
+
+7. debug net_probs:
+- 2151: đúng nhưng bị loại
+ + probs: 2148 [0.0, 0.13, 0.86]
+          2149 [0.0, 0.45, 0.55]
+          2150 [0.0, 0.56, 0.44]
+          2151 [0.0, 0.85, 0.15]
+          2152 [0.0, 0.97, 0.03]
+          2153 [0.0, 0.96, 0.04]
+          2154 [0.0, 0.83, 0.17]
+          2155 [0.0, 0.62, 0.38]
+          2156 [0.0, 0.31, 0.69]
+  + có thể đổi cách xét thành trong 9 frames lân cận trước sau có đủ 5 frames có probs > 0.6 thì sẽ pass được case này
+  + do bóng đi vào phần trắng trắng => ko detect được bóng nên probs hơi thấp
+
+- 2236: đúng nhưng bị loại
+  + probs:
+      2234 [0.0, 0.26, 0.74]
+      2235 [0.0, 0.71, 0.29]
+      2236 [0.0, 0.92, 0.08]
+      2237 [0.0, 0.98, 0.02]
+      2238 [0.0, 0.88, 0.12]
+      2239 [0.0, 0.3, 0.7]
+  + ball:
+      2229 [727, 561]
+      2230 [772, 563]
+      2231 [821, 569]
+      2232 [862, 573]
+      2233 [918, 582]
+      2234 [963, 586]
+      2235 [1012, 594]
+      2236 [1057, 603]
+      2237 [1106, 611]
+      2238 [1147, 620]
+      2239 [1200, 630]
+      2240 [1245, 641]
+      2241 [1282, 649]
+  
+  + pha này bóng qua lứoi quá nhanh
+
+- 4078: đúng nhưng bị loại
+  + probs:  4074 [0.0, 0.55, 0.45]
+            4075 [0.0, 0.74, 0.26]
+            4076 [0.0, 0.6, 0.4]
+            4077 [0.0, 0.78, 0.22]
+            4078 [0.0, 0.91, 0.09]
+            4079 [0.0, 0.92, 0.08]
+            4080 [0.0, 0.78, 0.22]
+            4081 [0.0, 0.56, 0.44]
+            4082 [0.0, 0.55, 0.45]
+            4083 [0.0, 0.36, 0.64]
+   + ball: 
+    4068 [870, 582]
+    4069 [873, 580]
+    4070 [-1920, -1080]
+    4071 [-1920, -1080]
+    4072 [-1920, -1080]
+    4073 [892, 573]
+    4074 [896, 573]
+    4075 [-1920, -1080]
+    4076 [907, 571]
+    4077 [911, 571]
+    4078 [915, 571]
+    4079 [922, 571]
+    4080 [926, 571]
+    4081 [933, 571]
+  
+  + fix ddưuọc bằng cách xét 9 frame lân cận ...
+  + tuy nhiên từ 4070-4078 chỉ có 5 frame có bóng ...
+   => ko detect đưuọc vì bóng đi vào phần trắng trắng
+   => có thể augment thêm dữ liệu 
+
+- 4460: bị loại thật
++ bóng nảy cao, vào phần phông xanh
++ probs: 
+  4458 [0.04, 0.25, 0.71]
+  4459 [0.03, 0.26, 0.72]
+  4460 [0.0, 0.72, 0.28]
+  4461 [0.0, 0.86, 0.14]
+  4462 [0.0, 0.85, 0.15]
+  4463 [0.0, 0.82, 0.18]
+  4464 [0.0, 0.76, 0.23]
+  4465 [0.08, 0.36, 0.56]
+  4466 [0.13, 0.42, 0.45]
+  4467 [0.0, 0.65, 0.35]
+  4468 [0.0, 0.73, 0.27]
+  4469 [0.03, 0.36, 0.61]
+
+- 4929: đúng nhưng bị loại
+ + probs: 
+  4927 [0.0, 0.55, 0.45]
+  4928 [0.0, 0.73, 0.27]
+  4929 [0.0, 0.85, 0.15]
+  4930 [0.0, 0.93, 0.07]
+  4931 [0.0, 0.35, 0.65]
+  4932 [0.0, 0.12, 0.88]
+  4933 [0.0, 0.0, 1.0]
+  + cũng là do bóng đi vào phần trắng trắng ko detect được
+
+- 5755: sai và bị loại
+  + bóng nảy cao, vào phần phông xanh
+  + probs:
+    5750 [0.15, 0.0, 0.85]
+    5751 [0.07, 0.03, 0.9]
+    5752 [0.03, 0.05, 0.93]
+    5753 [0.0, 0.41, 0.59]
+    5754 [0.0, 0.4, 0.6]
+    5755 [0.0, 0.75, 0.25]
+    5756 [0.0, 0.91, 0.09]
+    5757 [0.0, 0.88, 0.12]
+    5758 [0.0, 0.59, 0.41]
+    5759 [0.01, 0.2, 0.78]
+    5760 [0.02, 0.04, 0.94]
+  => đã có 2 TH bóng nảy cao vào phần phông xanh bị như này rồi 
+  => lí do là trong lúc train cũng có những TH bóng nảy cao, nhưng do chỉ crop 320 x 128
+     nên trong frame chỉ còn phần phông xanh, ko còn phần lứoi
+
+- 10523: sai và bị loại
+  + y hệt luôn, bóng nảy cao, vào phần phông xanh
+
+- 11521, 15458, 16471, 19683, 21952, 22537: y hệt luôn
+
+- 17331: đungs nhưng bị loại
+  + bóng bay qua lứoi, chạm vào phần logo butterfly trắng có phần ko detect được
+  + probs:
+    17323 [0.0, 0.08, 0.92]
+    17324 [0.0, 0.49, 0.51]
+    17325 [0.0, 0.63, 0.37]
+    17326 [0.0, 0.79, 0.21]
+    17327 [0.0, 0.8, 0.2]
+    17328 [0.0, 0.84, 0.16]
+    17329 [0.0, 0.91, 0.09]
+    17330 [0.0, 0.95, 0.05]
+    17331 [0.0, 0.96, 0.04]
+    17332 [0.0, 0.96, 0.04]
+    17333 [0.0, 0.96, 0.04]
+    17334 [0.0, 0.57, 0.43]
+    17335 [0.02, 0.44, 0.55]
+  + nếu dùng cách xét probs trong 9 frames lân cận có >= 5 frames có probs đủ lớn sẽ fix được case này
+
+- 18289: đúng nhưng bị loại
+  + probs:
+    18282 [0.01, 0.05, 0.94]
+    18283 [0.01, 0.17, 0.82]
+    18284 [0.03, 0.13, 0.84]
+    18285 [0.02, 0.06, 0.93]
+    18286 [0.03, 0.35, 0.62]
+    18287 [0.67, 0.0, 0.32]
+    18288 [0.65, 0.02, 0.33]
+    18289 [0.27, 0.16, 0.57]
+    18290 [0.0, 0.9, 0.1]
+    18291 [0.0, 0.66, 0.34]
+    18292 [0.0, 0.39, 0.61]
+    18293 [0.0, 0.0, 1.0]
+    18294 [0.0, 0.0, 1.0]
+    18295 [0.0, 0.0, 1.0]
+    18296 [0.0, 0.0, 1.0]
+    18297 [0.0, 0.0, 1.0]
+    18298 [0.0, 0.0, 1.0]
+  + detect bóng bị miss 1 pha (18281) làm các detect từ 18281 - 18289 bị sai hoàn toàn (do crop sai)
+   => cái coord detect sai ở khá xa các coord đúng => mean bị lệch nhiều
+   => có thể nghỉ đến cách dùng median thay vì mean
+
+- 18431: đúng nhưng bị loại
+ + probs: 
+    18426 [0.0, 0.0, 1.0]
+    18427 [0.0, 0.0, 1.0]
+    18428 [0.0, 0.36, 0.64]
+    18429 [0.0, 0.62, 0.38]
+    18430 [0.0, 0.89, 0.11]
+    18431 [0.0, 0.97, 0.03]
+    18432 [0.0, 0.98, 0.02]
+    18433 [0.0, 0.88, 0.12]
+    18434 [0.0, 0.46, 0.54]
+    18435 [0.0, 0.24, 0.75]
+    18436 [0.0, 0.0, 1.0]
+    18437 [0.0, 0.0, 1.0]
+ + detect ball chuẩn hết
+ + fix bằng cách xét trong 9 frames lân cận ....
+
+- 18476: đúng nhưng bị loại
+ + pha này khó, bóng nảy lưới chứ ko phải qua lưới
+ + probs:
+    18475 [0, 0, 1]
+    18476 [0, 0, 1]
+    18477 [0.0, 0.99, 0.01]
+    18478 [0.0, 0.89, 0.11]
+    18479 [0.0, 0.69, 0.31]
+    18480 [0.01, 0.36, 0.64]
+    18481 [0.0, 0.45, 0.55]
+    18482 [0.0, 0.01, 0.99]
+    18483 [0.0, 0.01, 0.99]
+  + ball: detect đúng, nhưng chỉ detect đưuọc 4 frames cuối => sẽ cắt theo mean 4 frame cuối
+  => có thể augment lúc sinh dữ liệu: mask 4 frames đầu or cuối rồi mới chọn mean_x, mean_y
+
+
+- 30192: đúng nhưng bị loại
+ + probs:
+    30188 [0.06, 0.04, 0.9]
+    30189 [0.02, 0.04, 0.94]
+    30190 [0.0, 0.42, 0.58]
+    30191 [0.0, 0.61, 0.39]
+    30192 [0.0, 0.7, 0.3]
+    30193 [0.0, 0.88, 0.12]
+    30194 [0.0, 0.8, 0.2]
+    30195 [0.0, 0.5, 0.49]
+    30196 [0.01, 0.32, 0.67]
+    30197 [0.0, 0.23, 0.77]
+    30198 [0.0, 0.0, 1.0]
+    30199 [0.0, 0.0, 0.99]
+  + ball:
+    30184 [847, 571]
+    30185 [858, 573]
+    30186 [866, 575]
+    30187 [877, 575]
+    30188 [1616, 921]  => detect ball sai làm crop sai
+    30189 [892, 580]
+    30190 [900, 580]
+    30191 [911, 584]
+    30192 [918, 586]
+    30193 [930, 590]
+
+- 30851: bóng chạm lưới nảy lại (ko qua lưới)
+ + probs:
+  30849 [0.91, 0.0, 0.09]
+  30850 [0.72, 0.0, 0.28]
+  30851 [0.34, 0.0, 0.66]
+  30852 [0.0, 0.84, 0.16]
+  30853 [0.0, 0.62, 0.38]
+  30854 [0.0, 0.56, 0.44]
+  30855 [0.04, 0.25, 0.71]
+  30856 [0.03, 0.08, 0.88]
+  30857 [0.01, 0.19, 0.8]
+  30858 [0.0, 0.0, 1.0]
+  30859 [0.01, 0.01, 0.99]
+ + ngay trước đó có bounce
+
+
+- 31987: bóng chạm lưới nảy lại (ko qua lưới)
+ + probs: 
+  31985 [0.0, 0.09, 0.91]
+  31986 [0.0, 0.5, 0.5]
+  31987 [0.01, 0.53, 0.47]
+  31988 [0.0, 0.95, 0.05]
+  31989 [0.3, 0.03, 0.67]
+  31990 [0.21, 0.05, 0.74]
+  31991 [0.0, 0.48, 0.51]
+  31992 [0.01, 0.22, 0.77]
+  31993 [0.04, 0.0, 0.96]
+  31994 [0.01, 0.0, 0.98]
+
+
+
+1. phân tích các lỗi sai bounce
+- detect sai => dẫn đến mean_cx, mean_cy sai => crop sai => infer sai
+- bóng ở dưới bàn trong 5 frame đầu, trồi lên mặt bàn trong 4 frames cuối hoặc ngược lại
+ => model bị overfit rằng chỉ cần 1 nửa chạm gần bàn là đủ
+ => augment mask 1 nửa và chuyển nhãn thành empty_event
+
+
+2. các lỗi sai net
+- bóng hay đi qua phần logo butterfly trắng => ko detect được, nên có nhiều TH đúng là net nhưng lại bị loại
+=> fix được bằng cách xét probs của 9 frame lân cận
+
+- bóng nảy cao, vào phần phông xanh, mà chỉ crop 1 khoảng nên sẽ thấy toàn phần phông xanh
+=> khi ng chơi tung bóng lên vào phần phông xanh cũng bị tính là net
+=> fix bằng cách crop 320 x 400 ??? hopefully đưuọc
+=> hoặc cách dễ hơn: nếu detect là net mà bóng ko nằm gần vị trí lưới hoặc bóng gần người => cho tạch lun

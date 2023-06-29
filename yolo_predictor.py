@@ -83,7 +83,7 @@ class YoloPredictor:
     
 
     def predict_img(self, img):
-        res = self.model.predict(source=img, imgsz=self.imgsz, conf=self.conf)
+        res = self.model.predict(source=img, imgsz=self.imgsz, conf=self.conf, save=False)
         frame, table_contour, ball_pos, person_bbs = self.process_res(
             res[0],
             last_ball_pos=None,
@@ -230,19 +230,21 @@ class YoloPredictor:
                 Với giả sử rằng vị trí ball ở 2 frame liên tiếp có ball là gần nhâu
               + nếu ko dùng last_ball_pos -> return ball có confidence_score cao nhất
         """
-        ball_indices = np.where(boxes[:, -1] == self.label2id['ball'])[0]
-        if len(ball_indices) <= 0:
-            return None
+        # ball_indices = np.where(boxes[:, -1] == self.label2id['ball'])[0]
+        # if len(ball_indices) <= 0:
+        #     return None
         
-        if len(ball_indices) == 1:
-            ball_idx = ball_indices[0]
-            ball_bb = boxes[ball_idx]
-        else: 
-            ball_bbs = boxes[ball_indices]
-            if last_ball_pos is None:
-                ball_idx = np.argmax(ball_bbs[:, 4])      # find ball with max confidence
-            else:  
-                ball_bb = find_nearest_ball(ball_bbs, last_ball_pos)
-        cx, cy = int(ball_bb[0] + ball_bb[2]) // 2, int(ball_bb[1] + ball_bb[3]) // 2
-        ball_pos = (cx, cy)
-        return ball_pos
+        # if len(ball_indices) == 1:
+        #     ball_idx = ball_indices[0]
+        #     ball_bb = boxes[ball_idx]
+        # else: 
+        #     ball_bbs = boxes[ball_indices]
+        #     if last_ball_pos is None:
+        #         ball_idx = np.argmax(ball_bbs[:, 4])      # find ball with max confidence
+        #         ball_bb = ball_bbs[ball_idx]
+        #     else:  
+        #         ball_bb = find_nearest_ball(ball_bbs, last_ball_pos)
+        # cx, cy = int(ball_bb[0] + ball_bb[2]) // 2, int(ball_bb[1] + ball_bb[3]) // 2
+        # ball_pos = (cx, cy)
+        # return ball_pos
+        return None

@@ -1,5 +1,5 @@
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+# os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 import onnx, onnxruntime
 import pdb
 import os
@@ -18,8 +18,8 @@ class EventCls3DOnnx:
         onnx_path,
         n_input_frames
     ):
-        # self.ort_session = onnxruntime.InferenceSession(onnx_path, providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
-        self.ort_session = onnxruntime.InferenceSession(onnx_path, providers=['CPUExecutionProvider'])
+        self.ort_session = onnxruntime.InferenceSession(onnx_path, providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
+        # self.ort_session = onnxruntime.InferenceSession(onnx_path, providers=['CPUExecutionProvider'])
         # assert onnxruntime.get_device() == 'GPU', 'onnx not running on GPU!'
 
         print('------------- ONNX model summary ------------')
@@ -37,7 +37,10 @@ class EventCls3DOnnx:
             mean = [0.45, 0.45, 0.45],
             std = [0.225, 0.225, 0.225]
         )
-        self.crop_size = (182, 182)
+        self.input_size = (182, 182)
+        self.crop_size = (320, 400)
+        self.ball_radius = 8
+        self.mask_red_ball = True
 
 
     def forward(self, imgs):
@@ -55,7 +58,7 @@ class EventCls3DOnnx:
         """
             list of frames (np.array shape 128 x 320 x 3)
         """
-        imgs = [cv2.resize(img, self.crop_size) for img in imgs]
+        imgs = [cv2.resize(img, self.input_size) for img in imgs]
         imgs = np.stack(imgs, axis=0)
         imgs = imgs.transpose(3, 0, 1, 2)    # shape 3 x n_frames x 182 x 182
         imgs = imgs / 255.

@@ -55,8 +55,8 @@ class CenternetOnnx:
         conf_thresh=0.5
     ):  
     
-        # self.ort_session = onnxruntime.InferenceSession(onnx_path, providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
-        self.ort_session = onnxruntime.InferenceSession(onnx_path, providers=['CPUExecutionProvider'])
+        self.ort_session = onnxruntime.InferenceSession(onnx_path, providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
+        # self.ort_session = onnxruntime.InferenceSession(onnx_path, providers=['CPUExecutionProvider'])
 
         assert onnxruntime.get_device() == 'GPU', 'onnx not running on GPU!'
 
@@ -118,7 +118,7 @@ class CenternetOnnx:
         """
         hm, om = self.forward(imgs)
         batch_final_pos, _ = self.postprocess(hm, om)
-        return batch_final_pos
+        return batch_final_pos / np.array([self.in_w, self.in_h])
 
 
 if __name__ == '__main__':

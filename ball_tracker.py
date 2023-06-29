@@ -183,41 +183,80 @@ class GameTracker:
         self.debug = debug
         self.vid_fp = vid_fp
         self.vid_res_dir = vid_res_dir
+
+        print('getting game info ...')
         self.total_fr, self.game_info = get_game_info(
             vid_res_dir,
             limit_ball_in_table=limit_ball_in_table,
             return_frame_with_no_ball=return_frame_with_no_ball
         )
-        self.fr_indices_with_ball = sorted([fr_idx for fr_idx, info in self.game_info.items() if info['ball'][0] != ignore_idx])
+
+        self.fr_indices_with_ball = sorted([fr_idx for fr_idx, info in self.game_info.items() if (info['ball'][0] >= 0 and info['ball'][1] >= 0)])
         self.tracker = KalmanBoxTracker(bbox=[0, 0, 5, 5])
         self.init_table_info()
         self.init_hyper_params()
         self.get_event_fr_indices()
 
 
+
+
     def get_event_fr_indices(self):
-        pdb.set_trace()
+        # pdb.set_trace()
         self.bounce_probs = [self.game_info[fr_idx]['ev_probs'][0] for fr_idx in self.game_info.keys()]
         self.net_probs = [self.game_info[fr_idx]['ev_probs'][1] for fr_idx in self.game_info.keys()]
         self.empty_probs = [self.game_info[fr_idx]['ev_probs'][2] for fr_idx in self.game_info.keys()]
 
-        self.bounce_indices, _ = find_peaks(
+        bounce_indices, _ = find_peaks(
             self.bounce_probs, 
             distance=self.fps//4, 
-            prominence=None, 
+            prominence=0.8, 
             width=None, 
             wlen=None
         )
-        self.bounce_indices = self.bounce_indices.tolist()
+        bounce_indices = bounce_indices.tolist()
 
-        self.net_indices, _ = find_peaks(
+        # remove indices with low prob
+        self.bounce_remove_indices = []
+        for idx in bounce_indices:
+            nearby_probs = self.bounce_probs[max(idx - 4, 0):idx + 5]
+            n_high_probs = len([prob for prob in nearby_probs if prob >= 0.6])
+            if n_high_probs < 5 or all(prob < 0.9 for prob in nearby_probs):
+                self.bounce_remove_indices.append(idx)
+
+        print('bounce remove indices: ', self.bounce_remove_indices)
+        self.bounce_indices = [max(idx - 4 + 1, 0) for idx in bounce_indices if idx not in self.bounce_remove_indices]
+        print('valid bounce indices: ', self.bounce_indices)
+
+        net_indices, _ = find_peaks(
             self.net_probs, 
             distance=self.fps//4, 
-            prominence=None, 
+            prominence=0.8, 
             width=None, 
             wlen=None
         )
-        self.net_indices = self.net_indices.tolist()
+        net_indices = net_indices.tolist()
+
+        # remove indices with low prob
+        self.net_remove_indices = []
+        for idx in net_indices:
+            nearby_probs = self.net_probs[max(idx - 4, 0):idx + 5]
+            n_high_probs = len([prob for prob in nearby_probs if prob >= 0.6])
+            if n_high_probs < 5 or all(prob < 0.9 for prob in nearby_probs):
+                self.net_remove_indices.append(idx)
+
+        # remove indices that have invalid ball pos
+        for idx in net_indices:
+            ls_cx, _, _ = self.get_list_coord(idx-4, idx+4, include_non_ball_frame=True)
+            ls_invalid_cx = [cx for cx in ls_cx if abs(cx-self.net_cx) > 300 or (not self.tab_xmin <= cx <= self.tab_xmax)]
+            if len(ls_invalid_cx) > 5:
+                self.net_remove_indices.append(idx)
+
+        print('net remove indices: ', self.net_remove_indices)
+        self.net_indices = [max(idx - 4 + 1, 0) for idx in net_indices if idx not in self.net_remove_indices]
+        print('valid net indices: ', self.net_indices)
+
+        pdb.set_trace()
+        
 
 
     def init_hyper_params(self):
@@ -329,6 +368,14 @@ class GameTracker:
         self.tab_w = self.tab_xmax - self.tab_xmin
         self.tab_h = self.tab_ymax - self.tab_ymin
 
+        offset = 30
+        self.tab_poly_extend = [
+            [self.tab_xmin - offset, self.tab_ymin - offset],
+            [self.tab_xmax + offset, self.tab_ymin - offset],
+            [self.tab_xmax + offset, self.tab_ymax + offset],
+            [self.tab_xmin - offset, self.tab_ymax + offset]
+        ]
+
 
     def generate_hightlight(self):
         """
@@ -356,15 +403,17 @@ class GameTracker:
                     started_fr = fr_idx
                     print(f'\nBall starts at frame {started_fr},', check_info['reason'])
 
-        print('\n------------ Filter valid rally ------------')
-        self.ls_rally = []
-        for rally in self.ls_proposed_rally:
-            # if rally[0] != 9658:
-            #     continue
-            print('\nChecking rally: ', rally)
-            if self.check_valid_rally(rally[0], rally[1], is_debug=True):
-                self.ls_rally.append(rally)
-        self.ls_rally = sorted(self.ls_rally, key=lambda x: x[0])
+        # print('\n------------ Filter valid rally ------------')
+        # self.ls_rally = []
+        # for rally in self.ls_proposed_rally:
+        #     # if rally[0] != 9658:
+        #     #     continue
+        #     print('\nChecking rally: ', rally)
+        #     if self.check_valid_rally(rally[0], rally[1], is_debug=True):
+        #         self.ls_rally.append(rally)
+        # self.ls_rally = sorted(self.ls_rally, key=lambda x: x[0])
+
+        self.ls_rally = self.ls_proposed_rally
         return self.ls_rally
     
 
@@ -396,26 +445,36 @@ class GameTracker:
         # ------------------ check serve predict result ---------------------
         is_serve = self.check_serve(index, fr_idx)
 
-        if (pass_min_fr_with_ball and is_valid_velocity and is_valid_min_travel_dist) or is_serve:
+        # if (pass_min_fr_with_ball and is_valid_velocity and is_valid_min_travel_dist) or is_serve:
+        #     info['result'] = 'pass'
+        #     info['reason'] = 'pass min_fr_with_ball, velocity, min travel distance test'
+        #     return True, info
+        # else:
+        #     if not pass_min_fr_with_ball:
+        #         info['result'] = 'fail'
+        #         info['reason'] = 'fail min_fr_with_ball test'
+        #         return False, info
+
+        #     if not is_valid_velocity:
+        #         info['result'] = 'fail'
+        #         info['reason'] = 'fail velocity test'
+        #         return False, info
+
+        #     if not is_valid_min_travel_dist:
+        #         info['result'] = 'fail'
+        #         info['reason'] = 'fail min travel distance test'
+        #         return False, info
+
+
+        if is_serve:
             info['result'] = 'pass'
-            info['reason'] = 'pass min_fr_with_ball, velocity, min travel distance test'
+            info['reason'] = 'pass serve detect'
             return True, info
         else:
-            if not pass_min_fr_with_ball:
-                info['result'] = 'fail'
-                info['reason'] = 'fail min_fr_with_ball test'
-                return False, info
-
-            if not is_valid_velocity:
-                info['result'] = 'fail'
-                info['reason'] = 'fail velocity test'
-                return False, info
-
-            if not is_valid_min_travel_dist:
-                info['result'] = 'fail'
-                info['reason'] = 'fail min travel distance test'
-                return False, info
-
+            info['result'] = 'fail'
+            info['reason'] = 'fail serve detect'
+            return False, info
+        
 
     def check_min_fr_with_ball(self, index, fr_idx):
         """
@@ -672,10 +731,10 @@ class GameTracker:
 
 
         # get number of turns
-        # _, list_extrema_x, _ = self.get_extrema_x(ls_cx, fr_indices, smooth=True)
-        # num_net_hit = len([fr_idx for fr_idx in self.net_indices if fr_idx >= start_idx and fr_idx <= end_idx])
-        # # info['n_turns'] = len(list_extrema_x) + 1
-        # info['n_turns'] = num_net_hit   # try to use num_net_hit instead of len(list_extrema_x) + 1
+        _, list_extrema_x, _ = self.get_extrema_x(ls_cx, fr_indices, smooth=True)
+        net_indices = [fr_idx for fr_idx in self.net_indices if fr_idx >= start_idx and fr_idx <= end_idx]
+        # info['n_turns'] = len(list_extrema_x) + 1
+        info['n_turns'] = len(net_indices)   # try to use num_net_hit instead of len(list_extrema_x) + 1
 
         
         # -------------------------- check end_reason and winner -----------------------
@@ -714,21 +773,18 @@ class GameTracker:
         #         info['end_reason'] = 'ball_out, no bounce'
         #         info['winner'] = 'left' if direction == 'r2l' else 'right'
 
-        res = self.check_end_reason_and_winner(start_idx, end_idx)
+        res = self.check_end_reason_and_winner(start_idx, end_idx, bounce_indices, net_indices)
         info['end_reason'] = res['end_reason']
         info['winner'] = res['winner']
-        if info['end_reason'] != 'good_ball':
-            info['n_turns'] = len(bounce_indices) + 1
-        else:
-            info['n_turns'] = len(bounce_indices)
 
         return info
     
 
-    def check_end_reason_and_winner(self, start_idx, end_idx) -> Dict[str, Any]:
-        bounce_indices = [fr_idx for fr_idx in self.bounce_indices if fr_idx >= start_idx and fr_idx <= end_idx]
-        net_indices = [fr_idx for fr_idx in self.net_indices if fr_idx >= start_idx and fr_idx <= end_idx]
-        last_bounce_idx = bounce_indices[-1]
+    def check_end_reason_and_winner(self, start_idx, end_idx, final_bounce_indices, final_net_indices) -> Dict[str, Any]:
+        if len(final_bounce_indices) == 0:
+            return {'end_reason': 'unknown', 'winner': 'unknown'}
+        
+        last_bounce_idx = final_bounce_indices[-1]
         last_bounce_pos = self.game_info[last_bounce_idx]['ball']
         bounce_side = 'left' if last_bounce_pos[0] < self.net_cx else 'right'
         ls_cx, ls_cy, fr_indices = self.get_list_coord(last_bounce_idx, end_idx, include_non_ball_frame=False)
@@ -736,7 +792,7 @@ class GameTracker:
         winner = 'right' if bounce_side == 'left' else 'left'
         _, extrema_x, _ = self.get_extrema_x(
             ls_cx, 
-            fr_indices, 
+            fr_indices,
             smooth=False,
             distance=None,
             prominence=self.distance_x//5,
@@ -750,8 +806,8 @@ class GameTracker:
                 'winner': winner
             }
         else:
-            tmp = len([fr_idx for fr_idx in net_indices if fr_idx >= last_bounce_idx and fr_idx <= end_idx])
-            if len(tmp) > 0:    # nếu có bóng qua lưới
+            num_over_net = len([fr_idx for fr_idx in final_net_indices if fr_idx >= last_bounce_idx and fr_idx <= end_idx])
+            if num_over_net > 0:    # nếu có bóng qua lưới
                 return {
                     'end_reason': 'ball out',
                     'winner': winner
@@ -766,7 +822,6 @@ class GameTracker:
 
     # def plot_ball_pos(self, start_idx, end_idx, smooth=False, save_path='test.jpg'):
     def plot_ball_pos(self, ls_cx, ls_cy, fr_indices, use_frame_idx_as_x=True, save_path='test.jpg'):
-
         ls_cx, extrema_x, _ = self.get_extrema_x(ls_cx, fr_indices, smooth=True)
         ls_cy, maxima_y, _ = self.get_maxima_y(ls_cy, fr_indices, smooth=True)
 
@@ -864,6 +919,9 @@ class GameTracker:
         """
             check if in the next 10 frames (15 frames interval), there are at least 7 frames that is serve
         """
+        if self.game_info[fr_idx]['is_serve'] == 0:
+            return False
+        
         check_limit = 10 # check 10 next frames is serve
         fr_interval = 15
         min_num_is_serve = 7
@@ -873,7 +931,11 @@ class GameTracker:
             fr_idx += fr_interval
             frame_indices_to_check.append(fr_idx)
         
-        num_is_serve = len([fr_idx for fr_idx in frame_indices_to_check if self.game_info[fr_idx]['is_serve'] == 1])
+        num_is_serve = len([fr_idx for fr_idx in frame_indices_to_check if fr_idx in self.game_info and self.game_info[fr_idx]['is_serve'] == 1])
+
+        # TODO
+        # if serve, check if the next following frames  actually contain enough ball, if not, it's not serve
+
         return num_is_serve >= min_num_is_serve
 
 
@@ -994,7 +1056,9 @@ class GameTracker:
 
     def get_valid_bounces(self, bounce_indices):
         ls_ball_pos = [self.game_info[idx]['ball'] for idx in bounce_indices]
-        bounce_indices = [bounce_indices[i] for i, pos in enumerate(ls_ball_pos) if is_point_inside_polygon(pos, self.tab_poly)]
+        # bounce_indices = [bounce_indices[i] for i, pos in enumerate(ls_ball_pos) if is_point_inside_polygon(pos, self.tab_poly)]
+        bounce_indices = [bounce_indices[i] for i, pos in enumerate(ls_ball_pos) if is_point_inside_polygon(pos, self.tab_poly_extend)]
+
         return bounce_indices
 
 

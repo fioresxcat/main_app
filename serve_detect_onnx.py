@@ -1,5 +1,5 @@
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+# os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 import onnx, onnxruntime
 import pdb
 import os
@@ -18,8 +18,8 @@ class ServeDetectOnnx:
         onnx_path,
         n_input_frames
     ):
-        # self.ort_session = onnxruntime.InferenceSession(onnx_path, providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
-        self.ort_session = onnxruntime.InferenceSession(onnx_path, providers=['CPUExecutionProvider'])
+        self.ort_session = onnxruntime.InferenceSession(onnx_path, providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
+        # self.ort_session = onnxruntime.InferenceSession(onnx_path, providers=['CPUExecutionProvider'])
         # assert onnxruntime.get_device() == 'GPU', 'onnx not running on GPU!'
 
         print('------------- ONNX model summary ------------')

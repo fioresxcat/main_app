@@ -1,0 +1,111 @@
+-------------------------- Inspecting valid rally --------------------------
+rally:  [750, 1143]
+list extrema x:  [851]
+info:  {'bounce_indices': [826, 884], 'n_turns': 0, 'end_reason': 'net hit', 'winner': 'right'}
+
+
+rally:  [1875, 2367]
+list extrema x:  [1955, 2037, 2106, 2206, 2245]
+info:  {'bounce_indices': [1881, 1927, 2010, 2079, 2170], 'n_turns': 4, 'end_reason': 'net hit', 'winner': 'right'}
+
+
+rally:  [3495, 3953]
+list extrema x:  [3658, 3734, 3763]
+info:  {'bounce_indices': [3591, 3635, 3707], 'n_turns': 2, 'end_reason': 'net hit', 'winner': 'left'}
+
+
+rally:  [4440, 4790]
+list extrema x:  []
+info:  {'bounce_indices': [4530], 'n_turns': 0, 'end_reason': 'net hit', 'winner': 'left'}
+
+
+rally:  [5475, 5870]
+list extrema x:  [5615, 5664, 5727]
+info:  {'bounce_indices': [5548, 5592, 5652, 5706], 'n_turns': 3, 'end_reason': 'net hit', 'winner': 'left'}
+
+
+rally:  [7020, 8357]
+list extrema x:  [7136, 7250, 7345, 7436, 7589]
+info:  {'bounce_indices': [7115, 7202, 7309, 7414, 7518, 7695, 7727, 7785, 7852, 7945], 'n_turns': 4, 'end_reason': 'net hit', 'winner': 'left'}
+
+
+rally:  [8835, 9212]
+list extrema x:  [8995]
+info:  {'bounce_indices': [8935, 8975, 9082], 'n_turns': 2, 'end_reason': 'good ball', 'winner': 'left'}
+
+
+rally:  [9630, 9999]
+list extrema x:  [9812, 9882]
+info:  {'bounce_indices': [9759, 9799], 'n_turns': 2, 'end_reason': 'ball out', 'winner': 'right'}
+
+
+rally:  [10500, 11096]
+list extrema x:  [10671, 10756, 10830, 10845, 10972]
+info:  {'bounce_indices': [10608, 10653, 10722, 10804], 'n_turns': 3, 'end_reason': 'ball out', 'winner': 'right'}
+
+
+rally:  [12135, 12586]
+list extrema x:  [12302]
+info:  {'bounce_indices': [12217, 12267], 'n_turns': 2, 'end_reason': 'ball out', 'winner': 'left'}
+
+
+rally:  [13140, 13571]
+list extrema x:  [13235, 13333, 13373, 13453]
+/data/tungtx2/datn/main_app/ball_tracker.py:829: RuntimeWarning: More than 20 figures have been opened. Figures created through the pyplot interface (`matplotlib.pyplot.figure`) are retained until explicitly closed and may consume too much memory. (To control this warning, see the rcParam `figure.max_open_warning`).
+  fig, ax = plt.subplots(figsize=(20, 7))
+info:  {'bounce_indices': [13168, 13214, 13300, 13360], 'n_turns': 4, 'end_reason': 'ball out', 'winner': 'left'}
+
+
+rally:  [14745, 15296]
+list extrema x:  [15010, 15071]
+info:  {'bounce_indices': [14852, 14926, 14972, 15096, 15151], 'n_turns': 2, 'end_reason': 'good ball', 'winner': 'left'}
+
+
+rally:  [15435, 15853]
+list extrema x:  [15589, 15735]
+info:  {'bounce_indices': [15536, 15582], 'n_turns': 2, 'end_reason': 'ball out', 'winner': 'right'}
+
+
+rally:  [16455, 17063]
+list extrema x:  [16610]
+info:  {'bounce_indices': [16550], 'n_turns': 0, 'end_reason': 'net hit', 'winner': 'left'}
+
+
+rally:  [18180, 18669]
+list extrema x:  [18319, 18396, 18457]
+info:  {'bounce_indices': [18254, 18303, 18373, 18449], 'n_turns': 2, 'end_reason': 'net hit', 'winner': 'left'}
+
+
+rally:  [19440, 19808]
+list extrema x:  [19525, 19606]
+info:  {'bounce_indices': [19451, 19498, 19579, 19640], 'n_turns': 2, 'end_reason': 'net hit', 'winner': 'left'}
+
+
+rally:  [20790, 21170]
+list extrema x:  [20942, 20952, 21025]
+info:  {'bounce_indices': [20874, 20923, 21002], 'n_turns': 3, 'end_reason': 'ball out', 'winner': 'left'}
+
+
+rally:  [21990, 22501]
+list extrema x:  [22137, 22234, 22312]
+info:  {'bounce_indices': [22057, 22107, 22192, 22291], 'n_turns': 4, 'end_reason': 'ball out', 'winner': 'right'}
+
+
+rally:  [30075, 31271]
+list extrema x:  [30235, 30314, 30362, 30430, 30508, 30585, 30684, 30766, 30852, 30996]
+info:  {'bounce_indices': [30156, 30207, 30294, 30348, 30413, 30496, 30548, 30635, 30732, 30844, 30893, 30937, 30978, 31016, 31113, 31167], 'n_turns': 7, 'end_reason': 'good ball', 'winner': 'right'}
+
+
+rally:  [31500, 32415]
+list extrema x:  [31686, 31789, 31874, 31931]
+info:  {'bounce_indices': [31612, 31745, 31848, 31915, 31999, 32057, 32113], 'n_turns': 4, 'end_reason': 'net hit', 'winner': 'right'}
+
+
+rally:  [33195, 33664]
+list extrema x:  [33320, 33389, 33486]
+info:  {'bounce_indices': [33265, 33309, 33366, 33456, 33528], 'n_turns': 4, 'end_reason': 'good ball', 'winner': 'left'}
+
+
+rally:  [34725, 35031]
+list extrema x:  [34866]
+info:  {'bounce_indices': [34800, 34845], 'n_turns': 2, 'end_reason': 'ball out', 'winner': 'right'}

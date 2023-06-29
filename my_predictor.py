@@ -65,50 +65,59 @@ class Predictor:
     ):
         self.yolo_detector = yolo_detector
         self.ball_detector = ball_detector
-        self.event_classifier = event_detector
+        self.event_detector = event_detector
         self.serve_classifier = serve_classifier
-        self.img_h, self.img_w = (1080, 1920)
+
+        self.event_detector.crop_size = self.event_detector.crop_size
+
+        self.orig_h, self.orig_w = (1080, 1920)
         self._init_deque()
     
 
     def _init_deque(self):
         self.running_ball_frames = deque(maxlen=self.ball_detector.n_input_frames)
-        self.running_ev_frames = deque(maxlen=self.event_classifier.n_input_frames)
-        self.running_ev_ball_pos = deque(maxlen=self.event_classifier.n_input_frames)
+        self.running_ev_frames = deque(maxlen=self.event_detector.n_input_frames)
+        self.running_ev_ball_pos = deque(maxlen=self.event_detector.n_input_frames)
         self.running_serve_frames = deque(maxlen=self.serve_classifier.n_input_frames)
 
     
     def predict_video(
         self,
         video_fp,
-        out_dir
+        out_dir,
     ):
+        """
+            all coords are returned as abs coords, in original frame shape: (1080, 1920)
+        """
         os.makedirs(out_dir, exist_ok=True)
         cap = cv2.VideoCapture(video_fp)
         frame_cnt = 0
-        serve_frame_diff = 0
+        serve_frame_interval = 0
         suc = True
         while suc:
             start = time.perf_counter()
             suc, frame = cap.read()
+            if not suc:
+                break
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             frame_cnt += 1
 
             # predict ball
             ball_pos = None
             self.update_running_ball_frames(frame)
             if len(self.running_ball_frames) == self.running_ball_frames.maxlen:
-                pdb.set_trace()
-                ball_pos = self.predict_ball()
-                ball_pos = np.array(ball_pos) * np.array([self.img_w, self.img_h])
+                ball_pos = self.predict_ball()   # ball_pos is never None, only (-1, -1) or valid pos
+                ball_pos = np.array(ball_pos) * np.array([self.orig_w, self.orig_h])
                 ball_pos = tuple(ball_pos.astype(np.int32))
 
             # predict player, table
-            person_bbs, table_poly, yolo_ball_pos = self.predict_players_and_table(frame)
-            # pdb.set_trace()
-            person_bbs = np.array(person_bbs) * np.array([self.img_w, self.img_h, self.img_w, self.img_h])
-            person_bbs = person_bbs.astype(np.int32)
-            table_poly = np.array(table_poly) * np.array([self.img_w, self.img_h])
-            table_poly = table_poly.astype(np.int32)
+            person_bbs, table_poly, yolo_ball_pos = self.predict_person_and_table(cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))   # yolo needs BGR image
+            if person_bbs is not None:
+                person_bbs = np.array(person_bbs) * np.array([self.orig_w, self.orig_h, self.orig_w, self.orig_h])
+                person_bbs = person_bbs.astype(np.int32)
+            if table_poly is not None:
+                table_poly = np.array(table_poly) * np.array([self.orig_w, self.orig_h])
+                table_poly = table_poly.astype(np.int32)
 
             # predict event
             event=None
@@ -117,15 +126,15 @@ class Predictor:
                 self.running_ev_frames.append(frame)
                 if len(self.running_ev_ball_pos) == self.running_ev_ball_pos.maxlen:
                     n_valid_ball_pos = len([pos for pos in self.running_ev_ball_pos if pos[0]>0 and pos[1]>0])
-                    if n_valid_ball_pos >= 2/3 * self.running_ev_ball_pos.maxlen:
+                    if n_valid_ball_pos >= self.running_ev_ball_pos.maxlen * 2 // 3:
                         event = self.predict_event()
 
             # predict serve
             is_serve = None
-            serve_frame_diff += 1
-            if serve_frame_diff == 15:
+            serve_frame_interval += 1
+            if serve_frame_interval == 15:
                 self.running_serve_frames.append(frame)
-                serve_frame_diff = 0
+                serve_frame_interval = 0
                 if len(self.running_serve_frames) == self.running_serve_frames.maxlen:
                     print('Detecting serve ...')
                     is_serve = self.predict_serve()
@@ -156,7 +165,7 @@ class Predictor:
 
     def predict_ball(self):
         """
-            get data from self.ball_frames and infer
+            get data from self.running_ball_frames and infer
             img in self.ball_frames are rgb, shape (512, 512, 3)
         """
         # preprocess
@@ -174,12 +183,12 @@ class Predictor:
         if pos[0] == 0 and pos[1] == 0:
             return (-1, -1)
         else:
-            cx = float(pos[0] / self.ball_detector.in_w)
-            cy = float(pos[1] / self.ball_detector.in_h)
+            cx = float(pos[0])
+            cy = float(pos[1])
             return (cx, cy)
     
 
-    def predict_players_and_table(self, frame):
+    def predict_person_and_table(self, frame):
         """
             frame is original frame shape (1080, 1920, 3)
         """
@@ -210,19 +219,26 @@ class Predictor:
             self.running_ev_ball_pos: list of (cx, cy)
         """
         # preprocess frame
-        mean_cx = np.mean([pos[0] for pos in self.running_ev_ball_pos if pos[0] > 0 and pos[1] > 0])
-        mean_cy = np.mean([pos[1] for pos in self.running_ev_ball_pos if pos[0] > 0 and pos[1] > 0])
-        mean_cx = int(mean_cx*1920)
-        mean_cy = int(mean_cy*1080)
-        xmin = max(0, mean_cx - 320//2)
-        xmax = min(mean_cx + 320//2, 1920)
-        ymin = max(0, mean_cy - 128//2)
-        ymax = min(mean_cy + 128//2, 1080)
+        median_cx = int(np.median([pos[0] for pos in self.running_ev_ball_pos if pos[0] > 0 and pos[1] > 0]))
+        median_cy = int(np.median([pos[1] for pos in self.running_ev_ball_pos if pos[0] > 0 and pos[1] > 0]))
+        xmin = max(0, median_cx - self.event_detector.crop_size[0]//2)
+        xmax = min(median_cx + self.event_detector.crop_size[0]//2, 1920)
+        ymin = max(0, median_cy - self.event_detector.crop_size[1]//3)
+        ymax = min(median_cy + self.event_detector.crop_size[1]*2//3, 1080)
 
         cropped_frames = []
-        for frame in self.running_ev_frames:
-            cropped_frame = frame[ymin:ymax, xmin:xmax, :]
-            cropped_frame = cv2.resize(cropped_frame, (320, 128))   # shape (128, 320, 3)
+        for i, frame in enumerate(self.running_ev_frames):
+            try:
+                cropped_frame = frame[ymin:ymax, xmin:xmax, :]
+                abs_pos = self.running_ev_ball_pos[i]
+                if self.event_detector.mask_red_ball and all(el > 0 for el in abs_pos):
+                    print('masking ball...')
+                    cropped_pos = (abs_pos[0] - xmin, abs_pos[1] - ymin)
+                    cropped_frame = cv2.circle(cropped_frame, cropped_pos, self.event_detector.ball_radius, (0, 0, 255), -1)
+                cropped_frame = cv2.resize(cropped_frame, (320, 128))   # shape (128, 320, 3)
+            except Exception as e:
+                print(e)
+                pdb.set_trace()
             cropped_frames.append(cropped_frame)
 
         # # preprocess pos
@@ -230,7 +246,7 @@ class Predictor:
         # pos = np.expand_dims(pos, axis=0)   # shape (1, 9, 2)
 
         # infer
-        event = self.event_classifier.predict(cropped_frames)
+        event = self.event_detector.predict(cropped_frames)
         return event
     
 
@@ -279,14 +295,15 @@ class Predictor:
 if __name__ == '__main__':
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     yolo = YoloPredictor(
-        model_fp='models/yolo-segment-train2-best.pt',
-        imgsz=1280,
+        model_fp='models/best_yolov8n_segment_train6.pt',
+        imgsz=640,
         conf=0.5
     )
     
     centernet = CenternetOnnx(
-        onnx_path='models/exp38_centernet_ason_fixed_mask_ball_epoch_18.onnx',
-        n_input_frames=5,
+        # onnx_path='models/ball_detect_centernet_3_frames_epoch51.onnx',
+        onnx_path='models/ball_detect_centernet_exp71_epoch40_add_no_ball_frame.onnx',
+        n_input_frames=3,
         decode_by_area=False,
         conf_thresh=0.5
     )
@@ -297,7 +314,8 @@ if __name__ == '__main__':
     # )
 
     event_cls_3d = EventCls3DOnnx(
-        onnx_path='models/event_cls_3d_exp2_ep19.onnx',
+        # onnx_path='models/event_cls_3d_exp2_ep19.onnx',
+        onnx_path='models/event_detector_epoch87_mask_red_ball.onnx',
         n_input_frames=9
     )
 
@@ -313,8 +331,8 @@ if __name__ == '__main__':
         serve_classifier=serve_classifier
     )
 
-    video_fp = '../samples/test_4.mp4'
+    video_fp = 'samples/test_4.mp4'
     predictor.predict_video(
         video_fp=video_fp,
-        out_dir='results/test_4'
+        out_dir='results/test_4_new_ball_new_event_mask_red_ball'
     )
