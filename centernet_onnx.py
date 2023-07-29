@@ -25,7 +25,8 @@ def decode_hm_by_contour(batch_hm, conf_thresh):
         if there is a heatmap in the batch with no detected ball, will return ball_pos as [0, 0]
 
     """
-    batch_hm = batch_hm.squeeze(dim=1).cpu().numpy()
+    # pdb.set_trace()
+    batch_hm = batch_hm.squeeze(axis=1)
     batch_hm_int = (batch_hm*255).astype(np.uint8)
     batch_pos = []
     for idx, hm_int in enumerate(batch_hm_int):
@@ -107,7 +108,7 @@ class CenternetOnnx:
             final_pos = pos + offset
             final_pos = final_pos / np.array([out_w, out_h]) * np.array([self.in_w, self.in_h])
             batch_final_pos.append(final_pos)
-        batch_final_pos = np.stack(batch_final_pos, axis=0).astype(np.int)
+        batch_final_pos = np.stack(batch_final_pos, axis=0).astype(np.int32)
 
         return batch_final_pos, max_values
 
@@ -117,8 +118,9 @@ class CenternetOnnx:
             imgs: shape n x 3 x 512 x 512, normalized
         """
         hm, om = self.forward(imgs)
-        batch_final_pos, _ = self.postprocess(hm, om)
-        return batch_final_pos / np.array([self.in_w, self.in_h])
+        batch_final_pos, max_values = self.postprocess(hm, om)
+        return batch_final_pos / np.array([self.in_w, self.in_h]), max_values
+
 
 
 if __name__ == '__main__':

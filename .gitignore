@@ -2,4 +2,8 @@
 .vscode/
 samples/
 results/
+debug/
+full_info*
+__pycache__/
+models/
 

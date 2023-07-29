@@ -59,8 +59,9 @@ def get_game_info(
             is_serve = 0
 
         if len(ball_lines) > 0:
-            ball_info = ball_lines[0]
-            cx, cy = [int(el) for el in ball_info.strip().split()[1:]]
+            ball_line = ball_lines[0]
+            cx, cy = [int(el) for el in ball_line.strip().split()[1:-1]]
+            ball_score = float(ball_line.strip().split()[-1])
             xmin = -1e5
             xmax = 1e5
             if limit_ball_in_table and len(tab_coord) > 0:
@@ -72,6 +73,7 @@ def get_game_info(
             if xmin < cx < xmax:
                 game_info[frame_idx] = {
                     'ball': [cx, cy],
+                    'ball_score': ball_score,
                     'table': tab_coord,
                     'person': person_bbs,
                     'ev_probs': ev_probs,
@@ -81,6 +83,7 @@ def get_game_info(
         elif return_frame_with_no_ball:
             game_info[frame_idx] = {
                 'ball': [ignore_idx, ignore_idx],
+                'ball_score': 0,
                 'table': tab_coord,
                 'person': person_bbs,
                 'ev_probs': ev_probs,
@@ -198,8 +201,6 @@ class GameTracker:
         self.get_event_fr_indices()
 
 
-
-
     def get_event_fr_indices(self):
         # pdb.set_trace()
         self.bounce_probs = [self.game_info[fr_idx]['ev_probs'][0] for fr_idx in self.game_info.keys()]
@@ -220,8 +221,12 @@ class GameTracker:
         for idx in bounce_indices:
             nearby_probs = self.bounce_probs[max(idx - 4, 0):idx + 5]
             n_high_probs = len([prob for prob in nearby_probs if prob >= 0.6])
-            if n_high_probs < 5 or all(prob < 0.9 for prob in nearby_probs):
-                self.bounce_remove_indices.append(idx)
+            if n_high_probs < 5 or all(prob < 0.9 for prob in nearby_probs):  # check nếu prob thấp
+                self.bounce_remove_indices.append(idx)  # loại bỏ dự đoán này
+                n_higher_probs = len([prob for prob in nearby_probs if prob >= 0.9])
+                if n_high_probs >= 4 and n_higher_probs >= 2:   # check thêm 1 điều kiện nữa để cho nó hoàn lương
+                    self.bounce_remove_indices.remove(idx)
+
 
         print('bounce remove indices: ', self.bounce_remove_indices)
         self.bounce_indices = [max(idx - 4 + 1, 0) for idx in bounce_indices if idx not in self.bounce_remove_indices]
@@ -241,8 +246,12 @@ class GameTracker:
         for idx in net_indices:
             nearby_probs = self.net_probs[max(idx - 4, 0):idx + 5]
             n_high_probs = len([prob for prob in nearby_probs if prob >= 0.6])
+
             if n_high_probs < 5 or all(prob < 0.9 for prob in nearby_probs):
                 self.net_remove_indices.append(idx)
+                n_higher_probs = len([prob for prob in nearby_probs if prob >= 0.9])
+                if n_high_probs >= 4 and n_higher_probs >= 2:
+                    self.net_remove_indices.remove(idx)
 
         # remove indices that have invalid ball pos
         for idx in net_indices:
@@ -255,7 +264,7 @@ class GameTracker:
         self.net_indices = [max(idx - 4 + 1, 0) for idx in net_indices if idx not in self.net_remove_indices]
         print('valid net indices: ', self.net_indices)
 
-        pdb.set_trace()
+        # pdb.set_trace()
         
 
 
@@ -369,6 +378,10 @@ class GameTracker:
         self.tab_h = self.tab_ymax - self.tab_ymin
 
         offset = 30
+        self.tab_xmin_extend = self.tab_xmin - offset   
+        self.tab_xmax_extend = self.tab_xmax + offset
+        self.tab_ymin_extend = self.tab_ymin - offset
+        self.tab_ymax_extend = self.tab_ymax + offset
         self.tab_poly_extend = [
             [self.tab_xmin - offset, self.tab_ymin - offset],
             [self.tab_xmax + offset, self.tab_ymin - offset],
@@ -390,7 +403,9 @@ class GameTracker:
                 is_end, check_info = self.check_end(index, fr_idx)
                 if is_end:
                     is_started = False
-                    end_fr = fr_idx + self.fr_check_interval if not check_info['reason'] == 'reach_end' else self.total_fr
+                    # end_fr = fr_idx + self.fr_check_interval if not check_info['reason'] == 'reach_end' else self.total_fr
+                    end_fr = fr_idx if not check_info['reason'] == 'reach_end' else self.total_fr
+
                     end_fr = min(end_fr, self.total_fr)
                     print(f'Ball ends at frame {end_fr},', check_info['reason'])
                     self.ls_proposed_rally.append([started_fr, end_fr])
@@ -715,16 +730,16 @@ class GameTracker:
         bounce_indices = [fr_idx for fr_idx in self.bounce_indices if fr_idx >= start_idx and fr_idx <= end_idx]
         bounce_indices = self.get_valid_bounces(bounce_indices)
 
-        # add bounce in predicted but not in manual
-        diff_limit = 10  # 10 frame
-        for idx in bounce_indices:
-            is_duplicate = False
-            for manual_idx in manual_bounce_indices:
-                if abs(idx - manual_idx) <= diff_limit:
-                    is_duplicate = True
-                    break
-            if not is_duplicate:
-                manual_bounce_indices.append(idx)
+        # # add bounce in predicted but not in manual
+        # diff_limit = 10  # 10 frame
+        # for idx in bounce_indices:
+        #     is_duplicate = False
+        #     for manual_idx in manual_bounce_indices:
+        #         if abs(idx - manual_idx) <= diff_limit:
+        #             is_duplicate = True
+        #             break
+        #     if not is_duplicate:
+        #         manual_bounce_indices.append(idx)
 
         # info['bounce_indices'] = manual_bounce_indices   # using both manual_bounce_indices and predicted_bounce_indices
         info['bounce_indices'] = bounce_indices   # not using manual_bounce_indices
@@ -733,54 +748,54 @@ class GameTracker:
         # get number of turns
         _, list_extrema_x, _ = self.get_extrema_x(ls_cx, fr_indices, smooth=True)
         net_indices = [fr_idx for fr_idx in self.net_indices if fr_idx >= start_idx and fr_idx <= end_idx]
-        # info['n_turns'] = len(list_extrema_x) + 1
-        info['n_turns'] = len(net_indices)   # try to use num_net_hit instead of len(list_extrema_x) + 1
+        info['n_turns'] = len(list_extrema_x) + 1
+        # info['n_turns'] = len(net_indices)   # try to use num_net_hit instead of len(list_extrema_x) + 1
+        info['net_indices'] = net_indices
 
         
         # -------------------------- check end_reason and winner -----------------------
-        # range2check = [list_extrema_x[-1], end_idx]
-        # print('range2check', range2check)
-        # direction = self.get_direction(range2check[0], range2check[1])
-        # is_net_hit, winner = self.check_net_hit(range2check[0], range2check[1], direction)
-        # if is_net_hit:
-        #     info['end_reason'] = 'net_hit'
-        #     info['winner'] = winner
-        # else:
-        #     # # check with manual bounce
-        #     # ls_cx, ls_cy, fr_indices = self.get_list_coord(range2check[0], range2check[1])
-        #     # _, bounce_indices, _ = self.get_maxima_y(ls_cy, fr_indices, smooth=True)
-        #     # if len(bounce_indices) > 0:
-        #     #     bounce_idx = bounce_indices[0]
-        #     #     bounce_cx, bounce_cy = self.game_info[bounce_idx]['ball']
-        #     #     if abs(bounce_cx-self.net_cx) < self.near_net_thresh:   # nếu bounce ở gần lưới => khả năng cao là bóng chạm lưới bật lên
-        #     #         info['end_reason'] = 'ball_out, bounce near net'
-        #     #         info['winner'] = 'left' if direction == 'r2l' else 'right'
-        #     #     else:   # bóng bounce xa lưới 
-        #     #         if self.tab_xmin < bounce_cx < self.tab_xmax or bounce_cy > self.tab_ymax:   # bóng bounce trong bàn
-        #     #             info['end_reason'] = 'good_ball'
-        #     #             info['winner'] = 'right' if direction == 'r2l' else 'left'
-        #     #         else:   # bounce ngoài bàn
-        #     #             info['end_reason'] = 'ball_out, bounce out of table'
-        #     #             info['winner'] = 'left' if direction == 'r2l' else 'right'
-
-        #     # check with predicted bounce
-        #     bounce_indices = [fr_idx for fr_idx in self.bounce_indices if fr_idx >= range2check[0] and fr_idx <= range2check[1]]
-        #     bounce_indices = self.get_valid_bounces(bounce_indices)
-        #     if len(bounce_indices) > 0:
-        #         info['end_reason'] = 'good_ball'
-        #         info['winner'] = 'right' if direction == 'r2l' else 'left'
-        #     else:
-        #         info['end_reason'] = 'ball_out, no bounce'
-        #         info['winner'] = 'left' if direction == 'r2l' else 'right'
-
-        res = self.check_end_reason_and_winner(start_idx, end_idx, bounce_indices, net_indices)
+        
+        res = self.AI_check_end_reason_and_winner(start_idx, end_idx, bounce_indices, net_indices)
         info['end_reason'] = res['end_reason']
         info['winner'] = res['winner']
 
         return info
     
 
-    def check_end_reason_and_winner(self, start_idx, end_idx, final_bounce_indices, final_net_indices) -> Dict[str, Any]:
+    def manual_check_end_reason_and_winner(self, start_idx, end_idx):
+        info = {}
+        ls_cx, ls_cy, fr_indices = self.get_list_coord(start_idx, end_idx)
+        _, list_extrema_x, _ = self.get_extrema_x(ls_cx, fr_indices, smooth=True)
+        range2check = [list_extrema_x[-1], end_idx]
+        print('range2check', range2check)
+        
+        direction = self.get_direction(range2check[0], range2check[1])
+        is_net_hit, winner = self.check_net_hit(range2check[0], range2check[1], direction)
+        if is_net_hit:
+            info['end_reason'] = 'net_hit'
+            info['winner'] = winner
+        else:
+            # check with manual bounce
+            ls_cx, ls_cy, fr_indices = self.get_list_coord(range2check[0], range2check[1])
+            _, bounce_indices, _ = self.get_maxima_y(ls_cy, fr_indices, smooth=True)
+            if len(bounce_indices) > 0:
+                bounce_idx = bounce_indices[0]
+                bounce_cx, bounce_cy = self.game_info[bounce_idx]['ball']
+                if abs(bounce_cx-self.net_cx) < self.near_net_thresh:   # nếu bounce ở gần lưới => khả năng cao là bóng chạm lưới bật lên
+                    info['end_reason'] = 'ball_out, bounce near net'
+                    info['winner'] = 'left' if direction == 'r2l' else 'right'
+                else:   # bóng bounce xa lưới 
+                    if self.tab_xmin < bounce_cx < self.tab_xmax or bounce_cy > self.tab_ymax:   # bóng bounce trong bàn
+                        info['end_reason'] = 'good_ball'
+                        info['winner'] = 'right' if direction == 'r2l' else 'left'
+                    else:   # bounce ngoài bàn
+                        info['end_reason'] = 'ball_out, bounce out of table'
+                        info['winner'] = 'left' if direction == 'r2l' else 'right'
+
+        return info
+        
+
+    def AI_check_end_reason_and_winner(self, start_idx, end_idx, final_bounce_indices, final_net_indices) -> Dict[str, Any]:
         if len(final_bounce_indices) == 0:
             return {'end_reason': 'unknown', 'winner': 'unknown'}
         
@@ -817,13 +832,59 @@ class GameTracker:
                     'end_reason': 'net hit',
                     'winner': winner
                 }
+            
+
+    def hybrid_check_end_reason_and_winner(self, start_idx, end_idx, final_bounce_indices, final_net_indices):
+        if len(final_bounce_indices) == 0:
+            return {'end_reason': 'unknown', 'winner': 'unknown'}
+        
+        last_bounce_idx = final_bounce_indices[-1]
+        last_bounce_pos = self.game_info[last_bounce_idx]['ball']
+        bounce_side = 'left' if last_bounce_pos[0] < self.net_cx else 'right'
+        ls_cx, ls_cy, fr_indices = self.get_list_coord(last_bounce_idx, end_idx, include_non_ball_frame=False)
+
+        winner = 'right' if bounce_side == 'left' else 'left'
+        
+        num_over_net = len([fr_idx for fr_idx in final_net_indices if fr_idx >= last_bounce_idx and fr_idx <= end_idx])
+        if num_over_net > 0:    # nếu có bóng qua lưới
+            info = {
+                'end_reason': 'ball_out',
+                'winner': winner
+            }
+        
+        else:  # nếu ko có bóng qua lưới
+            n_ball_in_table = len([cx for cx in ls_cx if self.tab_xmin_extend <= cx <= self.tab_xmax_extend])
+            if n_ball_in_table / len(ls_cx) > 0.5:  # nếu có nhiều bóng trong bàn
+                # xet them logic de phong truong hop ko detect duoc su kien net
+                n_ball_left = len([cx for cx in ls_cx if cx < self.net_cx])
+                n_ball_right = len([cx for cx in ls_cx if cx > self.net_cx])
+                min_side_percent = min(n_ball_left, n_ball_right) / len(ls_cx)
+
+                if min_side_percent > 0.3:  # neu ball o ca 2 phia cua luoi => ball out
+                    info = {
+                        'end_reason': 'ball_out',
+                        'winner': winner
+                    }
+                else:  # neu ball chi o 1 phia cua luoi => net hit
+                    info = {
+                        'end_reason': 'net_hit',
+                        'winner': winner
+                    }
+
+            else:   # neu co it ball in table, do la một pha bóng tốt (ko đỡ lại được)
+                info = {
+                    'end_reason': 'good_ball',
+                    'winner': winner
+                }
+
+
 
 
 
     # def plot_ball_pos(self, start_idx, end_idx, smooth=False, save_path='test.jpg'):
     def plot_ball_pos(self, ls_cx, ls_cy, fr_indices, use_frame_idx_as_x=True, save_path='test.jpg'):
-        ls_cx, extrema_x, _ = self.get_extrema_x(ls_cx, fr_indices, smooth=True)
-        ls_cy, maxima_y, _ = self.get_maxima_y(ls_cy, fr_indices, smooth=True)
+        ls_cx, extrema_x, _ = self.get_extrema_x(ls_cx, fr_indices, return_fr_idx=use_frame_idx_as_x, smooth=True)
+        ls_cy, maxima_y, _ = self.get_maxima_y(ls_cy, fr_indices, return_fr_idx=use_frame_idx_as_x, smooth=True)
 
         # Create a figure and axis object
         fig, ax = plt.subplots(figsize=(20, 7))
@@ -871,6 +932,7 @@ class GameTracker:
             ls_cx = self.smooth_x(ls_cx)
 
         # pdb.set_trace()
+        # nếu bóng đập vào luwois rồi nảy lại => last_extrema_x sẽ là lúc bóng đập vào lưới
         if abs(ls_cx[0]-self.net_cx) <= self.near_net_thresh:
             winner = 'left' if direction == 'l2r' else 'right'
             is_net_hit = True
@@ -1090,6 +1152,8 @@ class GameTracker:
 
                 # write ball info
                 fr_info['ball_pos'] = self.game_info[fr]['ball'] if fr in self.fr_indices_with_ball else None
+                fr_info['ball_score'] = self.game_info[fr]['ball_score']
+
 
                 # write bounce info
                 if fr in rally_info['bounce_indices']:
@@ -1141,6 +1205,7 @@ class GameTracker:
             fr_info = {}
             fr_info['state'] = 'not_in_rally'
             fr_info['ball_pos'] = self.game_info[fr]['ball'] if fr in self.fr_indices_with_ball else None
+            fr_info['ball_score'] = self.game_info[fr]['ball_score']
             fr_info['is_bounce'] = False
             fr_info['bounce_pos_to_draw'] = None
             fr_info['end_info'] = None
@@ -1171,14 +1236,17 @@ class GameTracker:
     def annotate_vid(self, save_dir):
         os.makedirs(save_dir, exist_ok=True)
         cap = cv2.VideoCapture(self.vid_fp)
+        total_fr_number = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         out_w, out_h = 1080, 640
         cnt = 0
         first_mark, offset = 30, 30
-        while cap.isOpened():
+        # pdb.set_trace()
+        while True:
             success, frame = cap.read()
             if not success:
                 break
             cnt += 1
+
             fr_info = self.game_insights[cnt]
 
             # write frame number at topleft
@@ -1195,14 +1263,16 @@ class GameTracker:
             # plot ball pos if have
             ball_pos = fr_info['ball_pos']
             if ball_pos is not None:
-                # draw a green circle at ball_pos
-                cv2.circle(frame, ball_pos, 10, (0, 255, 0), -1)
+                # draw a red circle at ball_pos
+                cv2.circle(frame, ball_pos, 10, (0, 0, 255), -1)
+                ball_score = fr_info['ball_score']
+                cv2.putText(frame, f'{ball_score:.2f}', (ball_pos[0]-10, ball_pos[1]-10), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
 
             # plot bounce pos if have
             bounce_pos = fr_info['bounce_pos_to_draw']
             if bounce_pos is not None:
-                # draw a red circle at ball_pos
-                cv2.circle(frame, bounce_pos, 10, (0, 0, 255), -1)
+                # draw a green circle at ball_pos
+                cv2.circle(frame, bounce_pos, 10, (0, 255, 0), -1)
 
             # write end_info if have
             end_info = fr_info['end_info_to_draw']
@@ -1221,7 +1291,7 @@ class GameTracker:
 
             frame = cv2.resize(frame, (out_w, out_h))
             cv2.imwrite(os.path.join(save_dir, f'{cnt:05d}.jpg'), frame)
-            print(f'Done frame {cnt}')
+            print(f'Done frame {cnt}/{total_fr_number}')
 
 
 

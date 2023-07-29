@@ -1,0 +1,412 @@
+{
+    "test_1": [
+        {
+            "start": 11230,
+            "end": 11723,
+            "end_reason": "good_ball",
+            "n_turns": 3,
+            "winner": "right"
+        },
+        {
+            "start": 12434,
+            "end": 13145,
+            "n_turns": 7,
+            "end_reason": "ball_out",
+            "winner": "left"
+        },
+        {
+            "start": 13530,
+            "end": 14300,
+            "n_turns": 3,
+            "end_reason": "good_ball",
+            "winner": "left"
+        },
+        {
+            "start": 15000,
+            "end": 15617,
+            "n_turns": 4,
+            "end_reason": "ball_out",
+            "winner": "left"
+        },
+        {
+            "start": 16260,
+            "end": 16733,
+            "n_turns": 2,
+            "end_reason": "net_hit",
+            "winner": "right"
+        }
+    ],
+    "test_3": [
+        {
+            "start": 719,
+            "end": 1450,
+            "n_turns": 3,
+            "end_reason": "net_hit",
+            "winner": "right"
+        },
+        {
+            "start": 2000,
+            "end": 2477,
+            "n_turns": 2,
+            "end_reason": "net_hit",
+            "winner": "left"
+        },
+        {
+            "start": 3055,
+            "end": 3571,
+            "n_turns": 4,
+            "end_reason": "ball_out",
+            "winner": "right"
+        },
+        {
+            "start": 4400,
+            "end": 5719,
+            "n_turns": 14,
+            "end_reason": "net_hit",
+            "winner": "right"
+        },
+        {
+            "start": 7032,
+            "end": 7700,
+            "n_turns": 4,
+            "end_reason": "good_ball",
+            "winner": "right"
+        }
+    ],
+    "test_4": [
+        {
+            "start": 522,
+            "n_turns": 1,
+            "end_reason": "net_hit",
+            "winner": "right",
+            "end": 1000
+        },
+        {
+            "start": 1563,
+            "n_turns": 5,
+            "end_reason": "ball_out",
+            "winner": "right",
+            "end": 2332
+        },
+        {
+            "start": 3319,
+            "n_turns": 3,
+            "end_reason": "net_hit",
+            "winner": "left",
+            "end": 3926
+        },
+        {
+            "start": 4276,
+            "n_turns": 1,
+            "end_reason": "net_hit",
+            "winner": "left",
+            "end": 4666
+        },
+        {
+            "start": 5286,
+            "n_turns": 4,
+            "end_reason": "ball_out",
+            "winner": "left",
+            "end": 5819
+        },
+        {
+            "start": 6696,
+            "n_turns": 6,
+            "end_reason": "net_hit",
+            "winner": "left",
+            "end": 7798
+        },
+        {
+            "start": 8700,
+            "n_turns": 2,
+            "end_reason": "good_ball",
+            "winner": "left",
+            "end": 9250
+        },
+        {
+            "start": 9522,
+            "n_turns": 2,
+            "end_reason": "ball_out",
+            "winner": "right",
+            "end": 10000
+        },
+        {
+            "start": 10354,
+            "n_turns": 4,
+            "end_reason": "ball_out",
+            "winner": "right",
+            "end": 11021
+        },
+        {
+            "start": 11922,
+            "n_turns": 2,
+            "end_reason": "ball_out",
+            "winner": "left",
+            "end": 12500
+        },
+        {
+            "start": 12835,
+            "n_turns": 4,
+            "end_reason": "ball_out",
+            "winner": "left",
+            "end": 13518
+        },
+        {
+            "start": 14530,
+            "n_turns": 2,
+            "end_reason": "re_serve",
+            "winner": null,
+            "end": null
+        },
+        {
+            "start": 15276,
+            "n_turns": 2,
+            "end_reason": "ball_out",
+            "winner": "right",
+            "end": 15782
+        },
+        {
+            "start": 16273,
+            "n_turns": 1,
+            "end_reason": "net_hit",
+            "winner": "left",
+            "end": 16757
+        },
+        {
+            "start": 17794,
+            "n_turns": 4,
+            "end_reason": "ball_out",
+            "winner": "left",
+            "end": 18700
+        },
+        {
+            "start": 19069,
+            "n_turns": 4,
+            "end_reason": "ball_out",
+            "winner": "left",
+            "end": 19800
+        },
+        {
+            "start": 20634,
+            "n_turns": 3,
+            "end_reason": "ball_out",
+            "winner": "left",
+            "end": 21170
+        },
+        {
+            "start": 21843,
+            "n_turns": 4,
+            "end_reason": "ball_out",
+            "winner": "right",
+            "end": 22500
+        },
+        {
+            "start": 23027,
+            "n_turns": 2,
+            "end_reason": "ball_out",
+            "winner": "left",
+            "end": 23739
+        },
+        {
+            "start": 29900,
+            "n_turns": 9,
+            "end_reason": "net_hit",
+            "winner": "right",
+            "end": 31000
+        },
+        {
+            "start": 31348,
+            "n_turns": 5,
+            "end_reason": "net_hit",
+            "winner": "right",
+            "end": 32122
+        },
+        {
+            "start": 32925,
+            "n_turns": 4,
+            "end_reason": "good_ball",
+            "winner": "left",
+            "end": 33675
+        },
+        {
+            "start": 34435,
+            "n_turns": 2,
+            "end_reason": "ball_out",
+            "winner": "right",
+            "end": 35081
+        }
+    ],
+    "end_reason_dict": {
+        "1": "good_ball",
+        "2": "ball_out",
+        "3": "net_hit",
+        "4": "re_serve"
+    },
+    "test_5": [
+        {
+            "start": 554,
+            "n_turns": 3,
+            "end_reason": "ball_out",
+            "winner": "left",
+            "end": 1100
+        },
+        {
+            "start": 1950,
+            "n_turns": 3,
+            "end_reason": "good_ball",
+            "winner": "right",
+            "end": 2600
+        },
+        {
+            "start": 3605,
+            "n_turns": 3,
+            "end_reason": "good_ball",
+            "winner": "left",
+            "end": 4373
+        },
+        {
+            "start": 5106,
+            "n_turns": 4,
+            "end_reason": "ball_out",
+            "winner": "left",
+            "end": 5800
+        },
+        {
+            "start": 6587,
+            "n_turns": 5,
+            "end_reason": "net_hit",
+            "winner": "left",
+            "end": 7352
+        },
+        {
+            "start": 7608,
+            "n_turns": 4,
+            "end_reason": "ball_out",
+            "winner": "left",
+            "end": 8280
+        },
+        {
+            "start": 10941,
+            "n_turns": 5,
+            "end_reason": "good_ball",
+            "winner": "left",
+            "end": 11450
+        }
+    ],
+    "test_6": [
+        {
+            "start": 202,
+            "n_turns": 4,
+            "end_reason": "ball_out",
+            "winner": "right",
+            "end": 830
+        },
+        {
+            "start": 1013,
+            "n_turns": 5,
+            "end_reason": "ball_out",
+            "winner": "left",
+            "end": 1752
+        },
+        {
+            "start": 2608,
+            "n_turns": 11,
+            "end_reason": "ball_out",
+            "winner": "right",
+            "end": 4111
+        },
+        {
+            "start": 5151,
+            "n_turns": 3,
+            "end_reason": "ball_out",
+            "winner": "right",
+            "end": 5878
+        },
+        {
+            "start": 6091,
+            "n_turns": 2,
+            "end_reason": "net_hit",
+            "winner": "right",
+            "end": 6600
+        },
+        {
+            "start": 6816,
+            "n_turns": 7,
+            "end_reason": "good_ball",
+            "winner": "right",
+            "end": 7787
+        },
+        {
+            "start": 8552,
+            "n_turns": 10,
+            "end_reason": "net_hit",
+            "winner": "right",
+            "end": 9768
+        },
+        {
+            "start": 10183,
+            "n_turns": 3,
+            "end_reason": "net_hit",
+            "winner": "right",
+            "end": 10790
+        }
+    ],
+    "test_7": [
+        {
+            "start": 777,
+            "n_turns": 3,
+            "end_reason": "good_ball",
+            "winner": "right",
+            "end": 1281
+        },
+        {
+            "start": 2109,
+            "n_turns": 7,
+            "end_reason": "net_hit",
+            "winner": "left",
+            "end": 3000
+        },
+        {
+            "start": 4387,
+            "n_turns": 4,
+            "end_reason": "ball_out",
+            "winner": "left",
+            "end": 5239
+        },
+        {
+            "start": 6100,
+            "n_turns": 17,
+            "end_reason": "net_hit",
+            "winner": "right",
+            "end": 7930
+        },
+        {
+            "start": 9307,
+            "n_turns": 1,
+            "end_reason": "ball_out",
+            "winner": "left",
+            "end": 9827
+        },
+        {
+            "start": 10500,
+            "n_turns": 7,
+            "end_reason": "ball_out",
+            "winner": "left",
+            "end": 11437
+        },
+        {
+            "start": 12900,
+            "n_turns": 9,
+            "end_reason": "good_ball",
+            "winner": "right",
+            "end": 14000
+        },
+        {
+            "start": 14817,
+            "n_turns": 4,
+            "end_reason": "net_hit",
+            "winner": "left",
+            "end": 15562
+        }
+    ]
+}

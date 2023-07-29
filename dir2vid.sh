@@ -1,32 +1,76 @@
+
 # ffmpeg  \
-# -framerate 30 \
+# -framerate 60 \
 # -pattern_type glob \
-# -i '/data2/tungtx2/datn/model_output/test_2_regen/results/*.jpg' \
+# -i '/data3/users/tungtx2/main_app/full_info_annotated_frames/test_4_added_no_ball_frame/*.jpg' \
 # -c:v libx264 \
 # -pix_fmt yuv420p \
-# '/data2/tungtx2/datn/model_output/test_2_regen/test2_annotated.mp4'
+# '/data3/users/tungtx2/main_app/full_info_annotated_videos/test_4_added_no_ball_frame.mp4'
 
 
 # ffmpeg  \
-# -framerate 30 \
+# -framerate 60 \
 # -pattern_type glob \
-# -i '/data2/tungtx2/datn/model_output/test_7_regen/results/*.jpg' \
+# -i '/data3/users/tungtx2/main_app/full_info_annotated_frames/test_4_not_added/*.jpg' \
 # -c:v libx264 \
 # -pix_fmt yuv420p \
-# '/data2/tungtx2/datn/model_output/test_7_regen/test7_annotated.mp4'
+# '/data3/users/tungtx2/main_app/full_info_annotated_videos/test_4_not_added.mp4'
+
+
+
+# ffmpeg  \
+# -framerate 60 \
+# -pattern_type glob \
+# -i '/data3/users/tungtx2/main_app/full_info_annotated_frames/test_7_not_added/*.jpg' \
+# -c:v libx264 \
+# -pix_fmt yuv420p \
+# '/data3/users/tungtx2/main_app/full_info_annotated_videos/test_7_not_added.mp4'
+
+
+
+# ffmpeg  \
+# -framerate 60 \
+# -pattern_type glob \
+# -i '/data3/users/tungtx2/main_app/full_info_annotated_frames/test_7_added_no_ball_frame/*.jpg' \
+# -c:v libx264 \
+# -pix_fmt yuv420p \
+# '/data3/users/tungtx2/main_app/full_info_annotated_videos/test_7_added_no_ball_frame.mp4'
+
+
+
+# ffmpeg  \
+# -framerate 60 \
+# -pattern_type glob \
+# -i '/data3/users/tungtx2/main_app/full_info_annotated_frames/test_3_not_added/*.jpg' \
+# -c:v libx264 \
+# -pix_fmt yuv420p \
+# '/data3/users/tungtx2/main_app/full_info_annotated_videos/test_3_not_added.mp4'
+
+
+
+# ffmpeg  \
+# -framerate 60 \
+# -pattern_type glob \
+# -i '/data3/users/tungtx2/main_app/full_info_annotated_frames/test_3_added_no_ball_frame/*.jpg' \
+# -c:v libx264 \
+# -pix_fmt yuv420p \
+# '/data3/users/tungtx2/main_app/full_info_annotated_videos/test_3_added_no_ball_frame.mp4'
+
+
+
+# ffmpeg  \
+# -framerate 60 \
+# -pattern_type glob \
+# -i '/data3/users/tungtx2/main_app/debug/test_4_added_no_ball_frame_decode_area/*.jpg' \
+# -c:v libx264 \
+# -pix_fmt yuv420p \
+# '/data3/users/tungtx2/main_app/full_info_annotated_videos/test_4_added_no_ball_frame_decode_area.mp4'
+
 
 ffmpeg  \
--framerate 30 \
+-framerate 60 \
 -pattern_type glob \
--i '/data2/tungtx2/datn/main_app/results/test_4_annotate_main/*.jpg' \
+-i '/data3/users/tungtx2/main_app/full_info_annotated_frames/test_6_added_no_ball_frame_add_pos_pred_weight_real/*.jpg' \
 -c:v libx264 \
 -pix_fmt yuv420p \
-'/data2/tungtx2/datn/main_app/results/test4_annotated_main_result.mp4'
-
-# ffmpeg  \
-# -framerate 30 \
-# -pattern_type glob \
-# -i '/data2/tungtx2/datn/model_output/test_4_regen/results/*.jpg' \
-# -c:v libx264 \
-# -pix_fmt yuv420p \
-# '/data2/tungtx2/datn/model_output/test_4_regen/test4_annotated.mp4'
+'/data3/users/tungtx2/main_app/full_info_annotated_videos/test_6_added_no_ball_frame_add_pos_pred_weight_real.mp4'
